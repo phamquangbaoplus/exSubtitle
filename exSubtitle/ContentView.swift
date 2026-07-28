@@ -280,7 +280,7 @@ struct ContentView: View {
         .onAppear {
             makeWindowFloatingAndTransparent()
             startAppleTVWindowDocking()
-            requestAccessibilityPermissionIfNeeded()
+            //requestAccessibilityPermissionIfNeeded() // Dont need any more
         }
         .onReceive(NotificationCenter.default.publisher(for: .openSRTFile)) { _ in
             selectSRTFile()
