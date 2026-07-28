@@ -32,19 +32,19 @@ class SubtitleManager: ObservableObject {
     
     private let mediaController = MediaController()
     private var appNapActivityToken: NSObjectProtocol?
-
+    
     init() {
         setupMediaRemoteListener()
         preventAppNap()
     }
-
+    
     private func preventAppNap() {
         appNapActivityToken = ProcessInfo.processInfo.beginActivity(
             options: [.userInitiated, .idleSystemSleepDisabled],
             reason: "Synchronize subtitles in real time with the TV app."
         )
     }
-
+    
     private func setupMediaRemoteListener() {
         mediaController.onTrackInfoReceived = { [weak self] trackInfo in
             guard let self = self else { return }
@@ -78,11 +78,11 @@ class SubtitleManager: ObservableObject {
                 self.updateSub()
             }
         }
-
+        
         mediaController.startListening()
         startInternalTimer()
     }
-
+    
     private func startInternalTimer() {
         internalTimer?.invalidate()
         internalTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
@@ -101,7 +101,7 @@ class SubtitleManager: ObservableObject {
             }
         }
     }
-
+    
     private func updateSub() {
         let posInt = Int(self.currentPositionMs)
         let effectiveTime = posInt - timeOffsetMs
@@ -122,7 +122,7 @@ class SubtitleManager: ObservableObject {
             }
         }
     }
-
+    
     func loadSRT(url: URL) {
         guard let content = try? String(contentsOf: url, encoding: .utf8) else { return }
         let normalizedContent = content.replacingOccurrences(of: "\r\n", with: "\n")
@@ -131,9 +131,9 @@ class SubtitleManager: ObservableObject {
         
         for block in blocks {
             let lines = block.trimmingCharacters(in: .whitespacesAndNewlines)
-                             .components(separatedBy: "\n")
-                             .map { $0.trimmingCharacters(in: .whitespaces) }
-                             .filter { !$0.isEmpty }
+                .components(separatedBy: "\n")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
             
             if let timeIndex = lines.firstIndex(where: { $0.contains("-->") }) {
                 let times = lines[timeIndex].components(separatedBy: "-->")
@@ -154,7 +154,7 @@ class SubtitleManager: ObservableObject {
         let delayInfo = timeOffsetMs != 0 ? "(Delay \(timeOffsetMs)ms)" : ""
         self.currentText = NSLocalizedString("Subtitle has been loaded", comment: "") + " \(delayInfo)"
     }
-
+    
     private func parseTime(_ timeStr: String) -> Int? {
         let cleanStr = timeStr.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: ",", with: ".")
         let parts = cleanStr.components(separatedBy: ":")
@@ -164,7 +164,7 @@ class SubtitleManager: ObservableObject {
               let seconds = Double(parts[2]) else { return nil }
         return Int((hours * 3600 + minutes * 60 + seconds) * 1000)
     }
-
+    
     func adjustOffset(by ms: Int) {
         timeOffsetMs += ms
     }
@@ -177,7 +177,7 @@ struct HTMLStrokeText: View {
     
     @AppStorage("selectedFontFamily") private var selectedFontFamily: String = "Helvetica Neue"
     @AppStorage("selectedFontWeight") private var selectedFontWeight: String = "Bold"
-
+    
     private var customNSFont: NSFont {
         let weightOption = FontWeightOption(rawValue: selectedFontWeight) ?? .regular
         var fontDescriptor = NSFontDescriptor(fontAttributes: [.family: selectedFontFamily])
@@ -197,15 +197,15 @@ struct HTMLStrokeText: View {
         
         return NSFont(descriptor: fontDescriptor, size: fontSize) ?? NSFont.systemFont(ofSize: fontSize, weight: weightOption.nsWeight)
     }
-
+    
     var attributedString: AttributedString {
         var cleanRawText = rawText
         
         if selectedFontWeight == FontWeightOption.regular.rawValue {
             cleanRawText = cleanRawText.replacingOccurrences(of: "<b>", with: "", options: .caseInsensitive)
-                                       .replacingOccurrences(of: "</b>", with: "", options: .caseInsensitive)
-                                       .replacingOccurrences(of: "<strong>", with: "", options: .caseInsensitive)
-                                       .replacingOccurrences(of: "</strong>", with: "", options: .caseInsensitive)
+                .replacingOccurrences(of: "</b>", with: "", options: .caseInsensitive)
+                .replacingOccurrences(of: "<strong>", with: "", options: .caseInsensitive)
+                .replacingOccurrences(of: "</strong>", with: "", options: .caseInsensitive)
         }
         
         let htmlData = Data(cleanRawText.utf8)
@@ -233,7 +233,7 @@ struct HTMLStrokeText: View {
         fallback.foregroundColor = .white
         return fallback
     }
-
+    
     var body: some View {
         Text(attributedString)
             .multilineTextAlignment(.center)
@@ -252,10 +252,10 @@ struct ContentView: View {
     @AppStorage("bottomOffset") private var bottomOffset: Double = 0.02
     
     @State private var tvWindowSize: CGSize = CGSize(width: 800, height: 450)
-
+    
     var body: some View {
         let calculatedFontSize = max(14, tvWindowSize.width * fontSizeRatio)
-
+        
         VStack {
             Spacer()
             HTMLStrokeText(rawText: subManager.currentText, fontSize: calculatedFontSize)
@@ -265,10 +265,10 @@ struct ContentView: View {
                     Group {
                         if backgroundStyle == BackgroundStyleOption.blur.rawValue && !subManager.currentText.isEmpty {
                             ZStack {
-                                    VisualEffectBlur(material: .hudWindow, blendingMode: .withinWindow)
-                                    Color.black.opacity(0.1) // Phủ thêm màu đen mờ nhẹ
-                                }
-                                .cornerRadius(8)
+                                VisualEffectBlur(material: .hudWindow, blendingMode: .withinWindow)
+                                Color.black.opacity(0.1) // Phủ thêm màu đen mờ nhẹ
+                            }
+                            .cornerRadius(8)
                         }
                     }
                 )
@@ -296,7 +296,7 @@ struct ContentView: View {
         let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
         _ = AXIsProcessTrustedWithOptions(options)
     }
-
+    
     private func selectSRTFile() {
         let panel = NSOpenPanel()
         if #available(macOS 11.0, *) {
@@ -330,7 +330,7 @@ struct ContentView: View {
         
         return Int(filename[range])
     }
-
+    
     private func showDelayPrompt(initialValue: Int, completion: @escaping (Int) -> Void) {
         let alert = NSAlert()
         alert.messageText = NSLocalizedString("Delay Subtitle (ms)", comment: "")
@@ -352,14 +352,30 @@ struct ContentView: View {
             completion(defaultDelayMs)
         }
     }
-
+    
+    
+    
+    // 💡 Hàm phụ trợ kiểm tra Full Screen
+    private func checkIfAppleTVIsFullScreen(tvRect: CGRect) -> Bool {
+        let currentScreen = NSScreen.screens.first(where: { $0.frame.intersects(tvRect) }) ?? NSScreen.main
+        guard let screenSize = currentScreen?.frame.size else { return false }
+        
+        return abs(tvRect.width - screenSize.width) < 15 && abs(tvRect.height - screenSize.height) < 15
+    }
+    
+    
+    // MARK: - 1. Setup Cửa sổ Floating chuẩn
     private func makeWindowFloatingAndTransparent() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             if let window = NSApplication.shared.windows.first {
                 window.isOpaque = false
                 window.backgroundColor = .clear
                 window.styleMask = [.borderless]
-                window.level = .floating
+                
+                // Cấu hình đè Space Fullscreen
+                window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
+                window.level = .mainMenu
+                
                 window.titleVisibility = .hidden
                 window.titlebarAppearsTransparent = true
                 window.standardWindowButton(.closeButton)?.isHidden = true
@@ -369,45 +385,79 @@ struct ContentView: View {
             }
         }
     }
-
+    
+    // MARK: - 2. Timer bám đuổi & Co dãn theo Apple TV Window
     private func startAppleTVWindowDocking() {
-        Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { _ in
-            guard let tvRect = getAppleTVWindowRect(),
-                  let window = NSApplication.shared.windows.first else { return }
-
+        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+            guard let tvRect = self.getAppleTVWindowRect(),
+                  let window = NSApplication.shared.windows.first(where: { $0 != self.getSettingsWindow() }) else { return }
+            
             if self.tvWindowSize != tvRect.size {
                 DispatchQueue.main.async {
                     self.tvWindowSize = tvRect.size
                 }
             }
-
+            
+            // 💡 GIẢI PHÁP 1: Luôn làm tươi cờ Full Screen Auxiliary liên tục
+            // Giúp cửa sổ đi theo ngay lập tức khi TV.app phóng to thành Full Screen Space
+            let requiredBehavior: NSWindow.CollectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
+            if window.collectionBehavior != requiredBehavior {
+                window.collectionBehavior = requiredBehavior
+            }
+            
+            // 💡 GIẢI PHÁP 2: Đảm bảo Level luôn đè lên phim
+            if window.level != .mainMenu {
+                window.level = .mainMenu
+            }
+            
             let overlayW: CGFloat = tvRect.width * 0.9
             let overlayH: CGFloat = max(60, tvRect.height * 0.2)
             let overlayX: CGFloat = tvRect.origin.x + (tvRect.width - overlayW) / 2
             
-            guard let screenHeight = NSScreen.main?.frame.height else { return }
+            let currentScreen = NSScreen.screens.first(where: { $0.frame.intersects(tvRect) }) ?? NSScreen.main
+            let screenHeight = currentScreen?.frame.height ?? 1080
+            let screenOriginY = currentScreen?.frame.origin.y ?? 0
             
-            // 💡 Đọc trực tiếp từ UserDefaults để luôn lấy giá trị mới nhất khi kéo Slider
             let liveBottomOffset = UserDefaults.standard.double(forKey: "bottomOffset")
             let calculatedOffset = tvRect.height * CGFloat(liveBottomOffset)
             
-            let overlayY: CGFloat = screenHeight - (tvRect.origin.y + tvRect.height) + calculatedOffset
-
+            let overlayY: CGFloat = (screenHeight + screenOriginY) - (tvRect.origin.y + tvRect.height) + calculatedOffset
+            
             let targetFrame = NSRect(x: overlayX, y: overlayY, width: overlayW, height: overlayH)
+            
+            // Cập nhật trí & Ép hiển thị xuyên Space
             window.setFrame(targetFrame, display: true, animate: false)
+            
+            // 💡 GIẢI PHÁP 3: Dùng cả orderFrontRegardless để lôi cửa sổ sang Space mới
+            window.orderFrontRegardless()
         }
     }
-
-
+    
+    private func getSettingsWindow() -> NSWindow? {
+        return NSApplication.shared.windows.first(where: { $0.title == "Settings" })
+    }
+    
+    // MARK: - 3. Scan Cửa sổ Apple TV thông minh theo từng chế độ
     private func getAppleTVWindowRect() -> CGRect? {
-        let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
+        // Thử quét cửa sổ ở Space hiện tại trước (Tối ưu cho chế độ Windowed bám chính xác 100%)
+        if let windowOnScreen = findTVWindow(options: [.optionOnScreenOnly, .excludeDesktopElements]) {
+            return windowOnScreen
+        }
+        
+        // Nếu không thấy (khi TV.app vào Full Screen chuyển Space), tiến hành quét xuyên Space
+        return findTVWindow(options: [.optionAll])
+    }
+    
+    private func findTVWindow(options: CGWindowListOption) -> CGRect? {
         guard let windowInfoList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else { return nil }
-
+        
         for info in windowInfoList {
             if let ownerName = info[kCGWindowOwnerName as String] as? String,
                (ownerName == "TV" || ownerName == "Apple TV"),
                let boundsDict = info[kCGWindowBounds as String] as? [String: Any],
                let rect = CGRect(dictionaryRepresentation: boundsDict as CFDictionary) {
+                
+                // Lọc bỏ thanh công cụ/menu phụ, chỉ lấy cửa sổ phim có kích thước hợp lệ
                 if rect.width > 300 && rect.height > 200 {
                     return rect
                 }
@@ -415,13 +465,14 @@ struct ContentView: View {
         }
         return nil
     }
+    
 }
 
 // MARK: - 4. HELPER CHẾ ĐỘ NỀN MỜ (BLUR EFFECT)
 struct VisualEffectBlur: NSViewRepresentable {
     var material: NSVisualEffectView.Material = .hudWindow // 👈 Dùng Semantic Material thay cho .dark
     var blendingMode: NSVisualEffectView.BlendingMode = .withinWindow
-
+    
     func makeNSView(context: Context) -> NSVisualEffectView {
         let visualEffectView = NSVisualEffectView()
         visualEffectView.material = material
@@ -433,11 +484,10 @@ struct VisualEffectBlur: NSViewRepresentable {
         
         return visualEffectView
     }
-
+    
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
         nsView.material = material
         nsView.blendingMode = blendingMode
         nsView.appearance = NSAppearance(named: .vibrantDark)
     }
 }
-

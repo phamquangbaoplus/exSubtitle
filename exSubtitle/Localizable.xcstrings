@@ -1,7 +1,11 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Background Style" : {
+
+    },
     "Background Style:" : {
+      "extractionState" : "stale",
       "localizations" : {
         "vi" : {
           "stringUnit" : {
@@ -12,6 +16,7 @@
       }
     },
     "Bottom Offset: %@%%" : {
+      "extractionState" : "stale",
       "localizations" : {
         "vi" : {
           "stringUnit" : {
@@ -22,6 +27,7 @@
       }
     },
     "Customize Subtitle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "vi" : {
           "stringUnit" : {
@@ -52,6 +58,7 @@
       }
     },
     "Font Family:" : {
+      "extractionState" : "stale",
       "localizations" : {
         "vi" : {
           "stringUnit" : {
@@ -61,15 +68,25 @@
         }
       }
     },
-    "Open .srt file" : {
+    "Font Size" : {
+
+    },
+    "Font Weight" : {
+
+    },
+    "Load subtitle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mở tệp .srt"
+            "value" : "Mở phụ đề"
           }
         }
       }
+    },
+    "Load subtitle..." : {
+
     },
     "Open .srt file to start load subtitle" : {
       "comment" : "Initial status message",
@@ -82,7 +99,32 @@
         }
       }
     },
+    "Position Offset" : {
+
+    },
+    "Quit" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thoát"
+          }
+        }
+      }
+    },
+    "Settings" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cài đặt"
+          }
+        }
+      }
+    },
     "Size: %@%%" : {
+      "extractionState" : "stale",
       "localizations" : {
         "vi" : {
           "stringUnit" : {
@@ -113,6 +155,7 @@
       }
     },
     "Weight:" : {
+      "extractionState" : "stale",
       "localizations" : {
         "vi" : {
           "stringUnit" : {

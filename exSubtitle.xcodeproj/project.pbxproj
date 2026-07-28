@@ -29,9 +29,22 @@
 		FA549C803018830600FA2DBA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		FAAAEB593018FC030015B334 /* Exceptions for "exSubtitle" folder in "exSubtitle" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 000000000000000100000000 /* exSubtitle */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		000000000000000000000010 /* exSubtitle */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				FAAAEB593018FC030015B334 /* Exceptions for "exSubtitle" folder in "exSubtitle" target */,
+			);
 			path = exSubtitle;
 			sourceTree = "<group>";
 		};
@@ -294,8 +307,10 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = exSubtitle/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = exSubtitle;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Ứng dụng cần kết nối Apple TV để đồng bộ thời gian phụ đề.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -341,8 +356,10 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = exSubtitle/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = exSubtitle;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Ứng dụng cần kết nối Apple TV để đồng bộ thời gian phụ đề.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
