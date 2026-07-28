@@ -2,37 +2,11 @@
   "sourceLanguage" : "en",
   "strings" : {
     "Background Style" : {
-
-    },
-    "Background Style:" : {
-      "extractionState" : "stale",
       "localizations" : {
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kiểu nền:"
-          }
-        }
-      }
-    },
-    "Bottom Offset: %@%%" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Khoảng cách đáy: %@%%"
-          }
-        }
-      }
-    },
-    "Customize Subtitle" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tuỳ Chỉnh Phụ Đề"
+            "value" : "Kiểu nền"
           }
         }
       }
@@ -57,25 +31,27 @@
         }
       }
     },
-    "Font Family:" : {
-      "extractionState" : "stale",
+    "Font Size" : {
       "localizations" : {
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kiểu chữ:"
+            "value" : "Cỡ chữ"
           }
         }
       }
     },
-    "Font Size" : {
-
-    },
     "Font Weight" : {
-
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Độ đậm"
+          }
+        }
+      }
     },
-    "Load subtitle" : {
-      "extractionState" : "stale",
+    "Load subtitle..." : {
       "localizations" : {
         "vi" : {
           "stringUnit" : {
@@ -84,9 +60,6 @@
           }
         }
       }
-    },
-    "Load subtitle..." : {
-
     },
     "Open .srt file to start load subtitle" : {
       "comment" : "Initial status message",
@@ -100,7 +73,14 @@
       }
     },
     "Position Offset" : {
-
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vị trí"
+          }
+        }
+      }
     },
     "Quit" : {
       "localizations" : {
@@ -108,28 +88,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Thoát"
-          }
-        }
-      }
-    },
-    "Settings" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cài đặt"
-          }
-        }
-      }
-    },
-    "Size: %@%%" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kích thước: %@%%"
           }
         }
       }
@@ -150,17 +108,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sử dụng cài đặt mặc định (0ms)"
-          }
-        }
-      }
-    },
-    "Weight:" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Độ đậm nhạt:"
           }
         }
       }

@@ -280,21 +280,10 @@ struct ContentView: View {
         .onAppear {
             makeWindowFloatingAndTransparent()
             startAppleTVWindowDocking()
-            //requestAccessibilityPermissionIfNeeded() // Dont need any more
         }
         .onReceive(NotificationCenter.default.publisher(for: .openSRTFile)) { _ in
             selectSRTFile()
         }
-    }
-    
-    private func requestAccessibilityPermissionIfNeeded() {
-        let isTrusted = AXIsProcessTrusted()
-        if isTrusted {
-            return
-        }
-        
-        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-        _ = AXIsProcessTrustedWithOptions(options)
     }
     
     private func selectSRTFile() {
@@ -386,30 +375,43 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - 2. Timer bám đuổi & Co dãn theo Apple TV Window
+    // MARK: - 2. Timer bám đuổi & Kiểm tra che lấp thông minh
     private func startAppleTVWindowDocking() {
         Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-            guard let tvRect = self.getAppleTVWindowRect(),
-                  let window = NSApplication.shared.windows.first(where: { $0 != self.getSettingsWindow() }) else { return }
+            guard let window = NSApplication.shared.windows.first else { return }
             
+            // 💡 1. Quét thông tin vị trí & Kiểm tra che lấp
+            guard let (tvRect, isObstructed) = self.checkTVWindowStatus() else {
+                if window.isVisible { window.orderOut(nil) }
+                return
+            }
+            
+            // Nếu bị cửa sổ khác đè lên khu vực xem -> Tạm ẩn Subtitle
+            if isObstructed {
+                if window.isVisible {
+                    window.orderOut(nil)
+                }
+                return
+            }
+            
+            // Cập nhật kích thước TV nếu có thay đổi
             if self.tvWindowSize != tvRect.size {
                 DispatchQueue.main.async {
                     self.tvWindowSize = tvRect.size
                 }
             }
             
-            // 💡 GIẢI PHÁP 1: Luôn làm tươi cờ Full Screen Auxiliary liên tục
-            // Giúp cửa sổ đi theo ngay lập tức khi TV.app phóng to thành Full Screen Space
+            // Cấu hình đè Space Fullscreen
             let requiredBehavior: NSWindow.CollectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
             if window.collectionBehavior != requiredBehavior {
                 window.collectionBehavior = requiredBehavior
             }
             
-            // 💡 GIẢI PHÁP 2: Đảm bảo Level luôn đè lên phim
             if window.level != .mainMenu {
                 window.level = .mainMenu
             }
             
+            // Tính toán khung hình Subtitle
             let overlayW: CGFloat = tvRect.width * 0.9
             let overlayH: CGFloat = max(60, tvRect.height * 0.2)
             let overlayX: CGFloat = tvRect.origin.x + (tvRect.width - overlayW) / 2
@@ -425,16 +427,83 @@ struct ContentView: View {
             
             let targetFrame = NSRect(x: overlayX, y: overlayY, width: overlayW, height: overlayH)
             
-            // Cập nhật trí & Ép hiển thị xuyên Space
             window.setFrame(targetFrame, display: true, animate: false)
             
-            // 💡 GIẢI PHÁP 3: Dùng cả orderFrontRegardless để lôi cửa sổ sang Space mới
+            // Đảm bảo hiển thị nếu không bị che
             window.orderFrontRegardless()
         }
     }
     
-    private func getSettingsWindow() -> NSWindow? {
-        return NSApplication.shared.windows.first(where: { $0.title == "Settings" })
+    // 💡 Hàm kiểm tra xem Apple TV có bị cửa sổ ứng dụng khác đè lên không
+    private func checkTVWindowStatus() -> (rect: CGRect, isObstructed: Bool)? {
+        // Thêm cờ excludeDesktopElements để loại bỏ Wallpaper, Widgets...
+        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+        guard let windowInfoList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else { return nil }
+        
+        var tvRect: CGRect?
+        var tvWindowIndex: Int?
+        
+        // Bước A: Tìm cửa sổ Apple TV trong danh sách Z-Order
+        for (index, info) in windowInfoList.enumerated() {
+            if let ownerName = info[kCGWindowOwnerName as String] as? String,
+               (ownerName == "TV" || ownerName == "Apple TV"),
+               let boundsDict = info[kCGWindowBounds as String] as? [String: Any],
+               let rect = CGRect(dictionaryRepresentation: boundsDict as CFDictionary),
+               rect.width > 300 && rect.height > 200 {
+                
+                tvRect = rect
+                tvWindowIndex = index
+                break
+            }
+        }
+        
+        // Nếu không tìm thấy ở Space hiện tại (ví dụ: TV đang Fullscreen ở Space khác)
+        guard let foundTVRect = tvRect, let tvIndex = tvWindowIndex else {
+            if let fsRect = findTVWindow(options: [.optionAll]) {
+                return (fsRect, false)
+            }
+            return nil
+        }
+        
+        // Danh sách các App/System Process cần BỎ QUA không tính là "che lấp"
+        let ignoredOwners: Set<String> = [
+            "exSubtitle", "ExSubtitle", "Window Server", "Control Center",
+            "SystemUIServer", "Dock", "NotificationCenter",
+            "Spotlight", "Wallpaper", "WindowManager"
+        ]
+        
+        // Bước B: Chỉ kiểm tra các cửa sổ ứng dụng thực sự nằm PHÍA TRÊN Apple TV
+        for i in 0..<tvIndex {
+            let info = windowInfoList[i]
+            let ownerName = info[kCGWindowOwnerName as String] as? String ?? ""
+            
+            // 1. Bỏ qua nếu thuộc danh sách hệ thống hoặc chính app exSubtitle
+            if ignoredOwners.contains(ownerName) {
+                continue
+            }
+            
+            // 2. Chỉ kiểm tra các cửa sổ có Layer = 0 (Khu vực ứng dụng bình thường của user)
+            let windowLayer = info[kCGWindowLayer as String] as? Int ?? 0
+            if windowLayer != 0 {
+                continue
+            }
+            
+            // 3. Lấy khung hình của cửa sổ nằm phía trên
+            if let boundsDict = info[kCGWindowBounds as String] as? [String: Any],
+               let upperRect = CGRect(dictionaryRepresentation: boundsDict as CFDictionary) {
+                
+                // Nếu cửa sổ giao thoa đè lên khu vực cửa sổ TV
+                if upperRect.intersects(foundTVRect) {
+                    let intersection = upperRect.intersection(foundTVRect)
+                    // Nếu diện tích bị đè lấp > 20% diện tích TV -> Mới coi là bị che!
+                    if (intersection.width * intersection.height) > (foundTVRect.width * foundTVRect.height * 0.20) {
+                        return (foundTVRect, true) // 🚨 Bị ứng dụng khác đè lên
+                    }
+                }
+            }
+        }
+        
+        return (foundTVRect, false) // 🟢 An toàn, hiện Subtitle bình thường
     }
     
     // MARK: - 3. Scan Cửa sổ Apple TV thông minh theo từng chế độ
