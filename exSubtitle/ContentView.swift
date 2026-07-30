@@ -52,6 +52,7 @@ class SubtitleManager: ObservableObject {
             DispatchQueue.main.async {
                 guard let info = trackInfo else {
                     self.isPlaying = false
+                    self.currentText = ""
                     return
                 }
                 
@@ -382,7 +383,17 @@ struct ContentView: View {
             
             // 💡 1. Quét thông tin vị trí & Kiểm tra che lấp
             guard let (tvRect, isObstructed) = self.checkTVWindowStatus() else {
-                if window.isVisible { window.orderOut(nil) }
+                
+                if window.isVisible {
+                    window.orderOut(nil)
+                }
+                
+                // Reset chữ phụ đề về rỗng để ngắt hiển thị triệt để
+                DispatchQueue.main.async {
+                    self.subManager.currentText = ""
+                    self.subManager.isPlaying = false
+                }
+                
                 return
             }
             
