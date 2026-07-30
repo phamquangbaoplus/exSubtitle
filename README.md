@@ -1,6 +1,10 @@
 # ExSubtitle - External Subtitle for Apple TV app on MacOS
 
-How to install
+A Mac app provides the ability to add external subtitles to the Apple TV app.
+
+<img width="5274" height="2485" alt="IMG_3380" src="https://github.com/user-attachments/assets/714571cd-6df9-4af6-b4a1-709b00e825dd" />
+
+## How to install
 
 1. Download and move exSubtitle.app to /Applications folder
 
@@ -8,7 +12,7 @@ How to install
 
 xattr -cr /Applications/ExSubtitle.app && codesign --force --deep --sign - /Applications/ExSubtitle.app
 
-How to use
+## How to use
 
 1. Open the Apple TV app and open the movie you want to watch.
 
