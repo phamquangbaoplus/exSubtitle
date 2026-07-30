@@ -10,7 +10,7 @@ A Mac app provides the ability to add external subtitles to the Apple TV app.
 
 2. Open terminal and run this code 
 
-xattr -cr /Applications/ExSubtitle.app && codesign --force --deep --sign - /Applications/ExSubtitle.app
+`xattr -cr /Applications/ExSubtitle.app && codesign --force --deep --sign - /Applications/ExSubtitle.app`
 
 ## How to use
 
