@@ -1,4 +1,4 @@
-# ExSubtitle - External Subtitle for Apple TV app on MacOS
+# exSubtitle - External Subtitle for Apple TV app on MacOS
 
 A Mac app provides the ability to add external subtitles to the Apple TV app.
 
@@ -16,7 +16,7 @@ A Mac app provides the ability to add external subtitles to the Apple TV app.
 
 1. Open the Apple TV app and open the movie you want to watch.
 
-2. Open ExSubtitle, press the shortcut Cmd + O (or select File > Open .srt file) to select the .srt subtitle file.
+2. Open exSubtitle, select the .srt subtitle file.
 
 3. Enter the delay time (if any) or keep the default and press OK.
 
