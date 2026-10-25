@@ -20,11 +20,12 @@ mkdir -p "$DIST_DIR" "$STAGING_DIR"
 # Resolve package dependencies
 xcodebuild -resolvePackageDependencies -project "$PROJECT" -scheme "$SCHEME"
 
-# Build application
+# Build application with explicit destination and disabled codesign requirement for CI
 xcodebuild build \
   -project "$PROJECT" \
   -scheme "$SCHEME" \
   -configuration "$CONFIGURATION" \
+  -destination "generic/platform=macOS" \
   -derivedDataPath "$DERIVED_DATA" \
   CODE_SIGN_IDENTITY="-" \
   CODE_SIGNING_REQUIRED=NO \
@@ -66,20 +67,28 @@ FINAL_DMG="${DIST_DIR}/exSubtitle-${VERSION}.dmg"
 GENERIC_DMG="${DIST_DIR}/exSubtitle.dmg"
 
 echo "==> Creating DMG installer with create-dmg..."
-"$CREATE_DMG_BIN" \
-  --volname "exSubtitle" \
-  --background "$BACKGROUND_IMG" \
-  --window-pos 200 120 \
-  --window-size 680 480 \
-  --icon-size 128 \
-  --text-size 13 \
-  --icon "exSubtitle.app" 175 215 \
-  --hide-extension "exSubtitle.app" \
-  --app-drop-link 505 215 \
-  --no-internet-enable \
-  --overwrite \
-  "$FINAL_DMG" \
-  "$STAGING_DIR"
+CREATE_DMG_ARGS=(
+  --volname "exSubtitle"
+  --background "$BACKGROUND_IMG"
+  --window-pos 200 120
+  --window-size 680 480
+  --icon-size 128
+  --text-size 13
+  --icon "exSubtitle.app" 175 215
+  --hide-extension "exSubtitle.app"
+  --app-drop-link 505 215
+  --hdiutil-retries 10
+  --no-internet-enable
+  --overwrite
+)
+
+# In CI/headless environments (like GitHub Actions), skip AppleScript if no GUI window server is available
+if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
+  echo "==> Running in CI environment: adding --sandbox-safe"
+  CREATE_DMG_ARGS+=(--sandbox-safe)
+fi
+
+"$CREATE_DMG_BIN" "${CREATE_DMG_ARGS[@]}" "$FINAL_DMG" "$STAGING_DIR"
 
 # Also create/update standard exSubtitle.dmg copy
 cp -f "$FINAL_DMG" "$GENERIC_DMG"
