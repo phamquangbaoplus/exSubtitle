@@ -21,6 +21,14 @@ mkdir -p "$DIST_DIR" "$STAGING_DIR"
 xcodebuild -resolvePackageDependencies -project "$PROJECT" -scheme "$SCHEME"
 
 # Build application with explicit destination and disabled codesign requirement for CI
+# Use the workflow version for the app bundle as well as the DMG filename.
+VERSION_SETTINGS=()
+if [ -n "${RELEASE_VERSION:-}" ]; then
+  VERSION_SETTINGS+=("MARKETING_VERSION=${RELEASE_VERSION}")
+fi
+if [ -n "${GITHUB_RUN_NUMBER:-}" ]; then
+  VERSION_SETTINGS+=("CURRENT_PROJECT_VERSION=${GITHUB_RUN_NUMBER}")
+fi
 xcodebuild build \
   -project "$PROJECT" \
   -scheme "$SCHEME" \
@@ -29,7 +37,8 @@ xcodebuild build \
   -derivedDataPath "$DERIVED_DATA" \
   CODE_SIGN_IDENTITY="-" \
   CODE_SIGNING_REQUIRED=NO \
-  CODE_SIGNING_ALLOWED=YES
+  CODE_SIGNING_ALLOWED=YES \
+  ${VERSION_SETTINGS[@]+"${VERSION_SETTINGS[@]}"}
 
 APP_PATH="${DERIVED_DATA}/Build/Products/${CONFIGURATION}/exSubtitle.app"
 if [ ! -d "$APP_PATH" ]; then
@@ -38,7 +47,11 @@ if [ ! -d "$APP_PATH" ]; then
 fi
 
 # Read version from Info.plist or xcodebuild
-VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "${APP_PATH}/Contents/Info.plist" 2>/dev/null || echo "1.0.0")
+VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "${APP_PATH}/Contents/Info.plist")
+if [ -n "${RELEASE_VERSION:-}" ] && [ "$VERSION" != "$RELEASE_VERSION" ]; then
+  echo "Error: App version $VERSION does not match release version $RELEASE_VERSION" >&2
+  exit 1
+fi
 echo "==> Application version: ${VERSION}"
 
 # Always regenerate background if script exists to keep layout & colors in sync
