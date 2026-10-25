@@ -95,12 +95,8 @@ CREATE_DMG_ARGS=(
   --overwrite
 )
 
-# In CI/headless environments (like GitHub Actions), skip AppleScript if no GUI window server is available
-if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
-  echo "==> Running in CI environment: adding --sandbox-safe"
-  CREATE_DMG_ARGS+=(--sandbox-safe)
-fi
-
+# Finder's AppleScript must run on CI too: it saves the background and icon layout.
+# --sandbox-safe skips this step and produces a DMG without the custom appearance.
 "$CREATE_DMG_BIN" "${CREATE_DMG_ARGS[@]}" "$FINAL_DMG" "$STAGING_DIR"
 
 # Also create/update standard exSubtitle.dmg copy
