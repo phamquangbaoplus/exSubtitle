@@ -11,6 +11,9 @@
         }
       }
     },
+    "Default" : {
+      "comment" : "Default subtitle position"
+    },
     "Delay Subtitle (ms)" : {
       "localizations" : {
         "vi" : {

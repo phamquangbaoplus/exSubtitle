@@ -37,10 +37,14 @@ extension Bundle {
     var appVersion: String {
         return infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
     }
-    
-    /// Trả về Build Number (Ví dụ: "1")
-    var buildNumber: String {
-        return infoDictionary?["CFBundleVersion"] as? String ?? "1"
+}
+
+enum SubtitlePreferences {
+    static let defaultBottomOffset = 0.02
+
+    static var bottomOffset: Double {
+        // A missing preference must use the same default in the menu and overlay.
+        (UserDefaults.standard.object(forKey: "bottomOffset") as? Double) ?? defaultBottomOffset
     }
 }
 
@@ -80,10 +84,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 1. Header App + Version
         let version = Bundle.main.appVersion
         let headerItem = NSMenuItem(title: "  exSubtitle v\(version)", action: nil, keyEquivalent: "")
-        if let headerIcon = NSImage(named: "AppIcon") {
-            headerIcon.size = NSSize(width: 18, height: 18)
-            headerItem.image = headerIcon
-        }
+        // Draw the informational header explicitly so its icon stays beside the title.
+        let iconView = NSImageView()
+        iconView.image = NSImage(named: "AppIcon") ?? NSImage(named: NSImage.applicationIconName)
+        iconView.imageScaling = .scaleProportionallyUpOrDown
+        iconView.setAccessibilityElement(false)
+        NSLayoutConstraint.activate([
+            iconView.widthAnchor.constraint(equalToConstant: 18),
+            iconView.heightAnchor.constraint(equalToConstant: 18)
+        ])
+
+        let titleLabel = NSTextField(labelWithString: "exSubtitle v\(version)")
+        titleLabel.font = NSFont.menuFont(ofSize: 0)
+        titleLabel.textColor = .secondaryLabelColor
+
+        let headerView = NSStackView(views: [iconView, titleLabel])
+        headerView.orientation = .horizontal
+        headerView.alignment = .centerY
+        headerView.spacing = 8
+        headerView.edgeInsets = NSEdgeInsets(top: 6, left: 14, bottom: 6, right: 14)
+        headerView.setFrameSize(headerView.fittingSize)
+        headerItem.view = headerView
         headerItem.isEnabled = false
         menu.addItem(headerItem)
         
@@ -160,8 +181,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // --- Bottom Offset Submenu ---
         let offsetMenu = NSMenu()
-        let offsetOptions: [(String, Double)] = [("Low", 0.01), ("Medium", 0.03), ("High", 0.06)]
-        let currentOffset = UserDefaults.standard.double(forKey: "bottomOffset") == 0 ? 0.02 : UserDefaults.standard.double(forKey: "bottomOffset")
+        let offsetOptions: [(String, Double)] = [
+            ("Low", 0.01),
+            (NSLocalizedString("Default", comment: "Default subtitle position"), SubtitlePreferences.defaultBottomOffset),
+            ("Medium", 0.03),
+            ("High", 0.06)
+        ]
+        let currentOffset = SubtitlePreferences.bottomOffset
         
         for (title, value) in offsetOptions {
             let menuItem = NSMenuItem(title: title, action: #selector(changeBottomOffset(_:)), keyEquivalent: "")

@@ -20,11 +20,13 @@ struct SubtitleItem {
 
 class SubtitleManager: ObservableObject {
     @Published var currentText: String = NSLocalizedString("Open .srt file to start load subtitle", comment: "Initial status message")
-    @Published var isPlaying: Bool = false
+    @Published var isPlaying: Bool = false {
+        didSet { updatePlaybackActivity() }
+    }
     @Published var timeOffsetMs: Int = 0
-    @Published var debugTimeStr: String = "00:00"
     
     private var subtitles: [SubtitleItem] = []
+    private var isShowingLoadMessage = false
     
     private var currentPositionMs: Double = 0.0
     private var internalTimer: Timer?
@@ -35,16 +37,28 @@ class SubtitleManager: ObservableObject {
     
     init() {
         setupMediaRemoteListener()
-        preventAppNap()
     }
     
-    private func preventAppNap() {
-        appNapActivityToken = ProcessInfo.processInfo.beginActivity(
-            options: [.userInitiated, .idleSystemSleepDisabled],
-            reason: "Synchronize subtitles in real time with the TV app."
-        )
+    deinit {
+        internalTimer?.invalidate()
+        if let token = appNapActivityToken {
+            ProcessInfo.processInfo.endActivity(token)
+        }
     }
-    
+
+    private func updatePlaybackActivity() {
+        if isPlaying {
+            guard appNapActivityToken == nil else { return }
+            appNapActivityToken = ProcessInfo.processInfo.beginActivity(
+                options: [.userInitiated, .idleSystemSleepDisabled],
+                reason: "Synchronize subtitles in real time with the TV app."
+            )
+        } else if let token = appNapActivityToken {
+            ProcessInfo.processInfo.endActivity(token)
+            appNapActivityToken = nil
+        }
+    }
+
     private func setupMediaRemoteListener() {
         mediaController.onTrackInfoReceived = { [weak self] trackInfo in
             guard let self = self else { return }
@@ -56,10 +70,11 @@ class SubtitleManager: ObservableObject {
                     return
                 }
                 
-                let previouslyPlaying = self.isPlaying
                 self.isPlaying = info.payload.isPlaying ?? false
                 
-                if let elapsedSeconds = info.payload.currentElapsedTime {
+                if let elapsedSeconds = info.payload.currentElapsedTime,
+                   elapsedSeconds.isFinite, elapsedSeconds >= 0,
+                   elapsedSeconds * 1000 < Double(Int.max) {
                     let realPosMs = elapsedSeconds * 1000.0
                     
                     if abs(self.currentPositionMs - realPosMs) > 200 || !self.isPlaying {
@@ -67,15 +82,8 @@ class SubtitleManager: ObservableObject {
                     }
                     
                     self.lastSystemTime = ProcessInfo.processInfo.systemUptime
-                    
-                    let sec = Int(realPosMs / 1000)
-                    self.debugTimeStr = String(format: "%02d:%02d", sec / 60, sec % 60)
                 }
-                
-                if !previouslyPlaying && self.isPlaying && self.currentText.contains("Waiting to play the movie") {
-                    self.currentText = ""
-                }
-                
+
                 self.updateSub()
             }
         }
@@ -104,21 +112,22 @@ class SubtitleManager: ObservableObject {
     }
     
     private func updateSub() {
-        let posInt = Int(self.currentPositionMs)
-        let effectiveTime = posInt - timeOffsetMs
+        guard let posInt = Int(exactly: currentPositionMs.rounded(.towardZero)) else { return }
+        let (effectiveTime, overflow) = posInt.subtractingReportingOverflow(timeOffsetMs)
+        guard !overflow else {
+            if !isShowingLoadMessage { currentText = "" }
+            return
+        }
         
         if let match = subtitles.first(where: { $0.startMs <= effectiveTime && effectiveTime <= $0.endMs }) {
+            isShowingLoadMessage = false
             if self.currentText != match.text {
-                DispatchQueue.main.async {
-                    self.currentText = match.text
-                }
+                self.currentText = match.text
             }
         } else {
             if !self.subtitles.isEmpty && posInt > 0 {
-                if !self.currentText.isEmpty && !self.currentText.contains(NSLocalizedString("Subtitle has been loaded", comment: "")) {
-                    DispatchQueue.main.async {
-                        self.currentText = ""
-                    }
+                if !self.currentText.isEmpty && !isShowingLoadMessage {
+                    self.currentText = ""
                 }
             }
         }
@@ -139,8 +148,8 @@ class SubtitleManager: ObservableObject {
             if let timeIndex = lines.firstIndex(where: { $0.contains("-->") }) {
                 let times = lines[timeIndex].components(separatedBy: "-->")
                 if times.count == 2,
-                   let start = parseTime(times[0]),
-                   let end = parseTime(times[1]) {
+                   let start = Self.parseTime(times[0]),
+                   let end = Self.parseTime(times[1]), end >= start {
                     
                     let textLines = Array(lines[(timeIndex + 1)...])
                     
@@ -152,23 +161,26 @@ class SubtitleManager: ObservableObject {
             }
         }
         self.subtitles = parsed
+        isShowingLoadMessage = true
         let delayInfo = timeOffsetMs != 0 ? "(Delay \(timeOffsetMs)ms)" : ""
         self.currentText = NSLocalizedString("Subtitle has been loaded", comment: "") + " \(delayInfo)"
     }
     
-    private func parseTime(_ timeStr: String) -> Int? {
+    static func parseTime(_ timeStr: String) -> Int? {
         let cleanStr = timeStr.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: ",", with: ".")
         let parts = cleanStr.components(separatedBy: ":")
         guard parts.count == 3,
               let hours = Double(parts[0]),
               let minutes = Double(parts[1]),
-              let seconds = Double(parts[2]) else { return nil }
-        return Int((hours * 3600 + minutes * 60 + seconds) * 1000)
+              let seconds = Double(parts[2]),
+              hours.isFinite, minutes.isFinite, seconds.isFinite,
+              hours >= 0, hours.rounded(.towardZero) == hours,
+              minutes >= 0, minutes < 60, minutes.rounded(.towardZero) == minutes,
+              seconds >= 0, seconds < 60 else { return nil }
+        let milliseconds = (hours * 3600 + minutes * 60 + seconds) * 1000
+        return Int(exactly: milliseconds.rounded(.towardZero))
     }
-    
-    func adjustOffset(by ms: Int) {
-        timeOffsetMs += ms
-    }
+
 }
 
 // MARK: - 2. COMPONENT HIỂN THỊ CHỮ VIỀN ĐEN SẮC NÉT
@@ -209,7 +221,10 @@ struct HTMLStrokeText: View {
                 .replacingOccurrences(of: "</strong>", with: "", options: .caseInsensitive)
         }
         
-        let htmlData = Data(cleanRawText.utf8)
+        // HTML otherwise collapses SRT line breaks into spaces.
+        let htmlText = cleanRawText.replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\n", with: "<br>")
+        let htmlData = Data(htmlText.utf8)
         if let nsAttributedString = try? NSMutableAttributedString(
             data: htmlData,
             options: [.documentType: NSAttributedString.DocumentType.html,
@@ -247,11 +262,11 @@ struct HTMLStrokeText: View {
 // MARK: - 3. GIAO DIỆN SWIFTUI TRONG SUỐT
 struct ContentView: View {
     @EnvironmentObject var subManager: SubtitleManager
-    private var defaultDelayMs: Int = 0
+    private let defaultDelayMs: Int = 0
     @AppStorage("fontSizeRatio") private var fontSizeRatio: Double = 0.02
     @AppStorage("backgroundStyle") private var backgroundStyle: String = BackgroundStyleOption.transparent.rawValue
-    @AppStorage("bottomOffset") private var bottomOffset: Double = 0.02
     
+    @State private var dockingTimer: Timer?
     @State private var tvWindowSize: CGSize = CGSize(width: 800, height: 450)
     
     var body: some View {
@@ -282,6 +297,10 @@ struct ContentView: View {
             makeWindowFloatingAndTransparent()
             startAppleTVWindowDocking()
         }
+        .onDisappear {
+            dockingTimer?.invalidate()
+            dockingTimer = nil
+        }
         .onReceive(NotificationCenter.default.publisher(for: .openSRTFile)) { _ in
             selectSRTFile()
         }
@@ -289,12 +308,8 @@ struct ContentView: View {
     
     private func selectSRTFile() {
         let panel = NSOpenPanel()
-        if #available(macOS 11.0, *) {
-            let srtType = UTType(filenameExtension: "srt") ?? .plainText
-            panel.allowedContentTypes = [srtType, .plainText]
-        } else {
-            panel.allowedFileTypes = ["srt", "txt"]
-        }
+        let srtType = UTType(filenameExtension: "srt") ?? .plainText
+        panel.allowedContentTypes = [srtType, .plainText]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         
@@ -345,15 +360,6 @@ struct ContentView: View {
     
     
     
-    // 💡 Hàm phụ trợ kiểm tra Full Screen
-    private func checkIfAppleTVIsFullScreen(tvRect: CGRect) -> Bool {
-        let currentScreen = NSScreen.screens.first(where: { $0.frame.intersects(tvRect) }) ?? NSScreen.main
-        guard let screenSize = currentScreen?.frame.size else { return false }
-        
-        return abs(tvRect.width - screenSize.width) < 15 && abs(tvRect.height - screenSize.height) < 15
-    }
-    
-    
     // MARK: - 1. Setup Cửa sổ Floating chuẩn
     private func makeWindowFloatingAndTransparent() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -378,7 +384,8 @@ struct ContentView: View {
     
     // MARK: - 2. Timer bám đuổi & Kiểm tra che lấp thông minh
     private func startAppleTVWindowDocking() {
-        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+        guard dockingTimer == nil else { return }
+        dockingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
             guard let window = NSApplication.shared.windows.first else { return }
             
             // 💡 1. Quét thông tin vị trí & Kiểm tra che lấp
@@ -431,7 +438,7 @@ struct ContentView: View {
             let screenHeight = currentScreen?.frame.height ?? 1080
             let screenOriginY = currentScreen?.frame.origin.y ?? 0
             
-            let liveBottomOffset = UserDefaults.standard.double(forKey: "bottomOffset")
+            let liveBottomOffset = SubtitlePreferences.bottomOffset
             let calculatedOffset = tvRect.height * CGFloat(liveBottomOffset)
             
             let overlayY: CGFloat = (screenHeight + screenOriginY) - (tvRect.origin.y + tvRect.height) + calculatedOffset
@@ -515,17 +522,6 @@ struct ContentView: View {
         }
         
         return (foundTVRect, false) // 🟢 An toàn, hiện Subtitle bình thường
-    }
-    
-    // MARK: - 3. Scan Cửa sổ Apple TV thông minh theo từng chế độ
-    private func getAppleTVWindowRect() -> CGRect? {
-        // Thử quét cửa sổ ở Space hiện tại trước (Tối ưu cho chế độ Windowed bám chính xác 100%)
-        if let windowOnScreen = findTVWindow(options: [.optionOnScreenOnly, .excludeDesktopElements]) {
-            return windowOnScreen
-        }
-        
-        // Nếu không thấy (khi TV.app vào Full Screen chuyển Space), tiến hành quét xuyên Space
-        return findTVWindow(options: [.optionAll])
     }
     
     private func findTVWindow(options: CGWindowListOption) -> CGRect? {
