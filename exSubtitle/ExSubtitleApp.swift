@@ -68,6 +68,46 @@ extension Notification.Name {
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        guard let bundleIdentifier = Bundle.main.bundleIdentifier else { return }
+        let current = NSRunningApplication.current
+        let otherInstances = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier)
+            .filter { $0.processIdentifier != current.processIdentifier }
+
+        // If two copies start together, only the most recently launched copy takes over.
+        let newerInstanceExists = otherInstances.contains { application in
+            guard let otherDate = application.launchDate, let currentDate = current.launchDate else {
+                return application.processIdentifier > current.processIdentifier
+            }
+            return otherDate > currentDate ||
+                (otherDate == currentDate && application.processIdentifier > current.processIdentifier)
+        }
+        if newerInstanceExists {
+            exit(EXIT_SUCCESS)
+        }
+
+        for application in otherInstances {
+            application.terminate()
+        }
+
+        let gracefulDeadline = Date().addingTimeInterval(3)
+        while otherInstances.contains(where: { !$0.isTerminated }) && Date() < gracefulDeadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+        for application in otherInstances where !application.isTerminated {
+            application.forceTerminate()
+        }
+
+        let forcedDeadline = Date().addingTimeInterval(3)
+        while otherInstances.contains(where: { !$0.isTerminated }) && Date() < forcedDeadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+        // Do not start another working instance if the previous one could not be stopped.
+        if otherInstances.contains(where: { !$0.isTerminated }) {
+            exit(EXIT_FAILURE)
+        }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         setupStatusItem()
